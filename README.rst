@@ -55,7 +55,16 @@ Once dependencies are installed, clone this repo and run ``setup.py``:
 Getting Started
 ---------------
 
-TODO.
+To use `pwclient`, you will need a `.pwclientrc` file, located in your home
+directory (``$HOME`` or ``~``). Patchwork itself provides sample `.pwclientrc`
+files for projects at ``/project/{projectName}/pwclientrc/``. For example,
+`here`__ is the `.pwclientrc` file for Patchwork itself.
+
+More information on the format of the `.pwclientrc` file can be found in the
+`documentation`__.
+
+__ https://patchwork.ozlabs.org/project/patchwork/pwclientrc/
+__ https://pwclient.readthedocs.io/
 
 Development
 -----------
@@ -82,4 +91,4 @@ Documentation
 
 Documentation is available on `Read the Docs`__
 
-__ https://pwclient.readthedocs.org/
+__ https://pwclient.readthedocs.io/
