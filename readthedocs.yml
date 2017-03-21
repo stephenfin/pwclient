@@ -1,0 +1,8 @@
+formats:
+  - epub
+  - pdf
+requirements_file: test-requirements.txt
+python:
+  version: 2.7
+  setup_py_install: true
+  pip_install: true

@@ -1,0 +1,4 @@
+-rrequirements.txt
+sphinx>=1.5,<2.0
+reno>=2.0,<3.0
+sphinxcontrib-autoprogram
