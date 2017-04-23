@@ -26,7 +26,6 @@ import os
 import sys
 import argparse
 import subprocess
-import shutil
 
 from pwclient.checks import action_create as action_check_create
 from pwclient.checks import action_info as action_check_info
@@ -43,6 +42,7 @@ from pwclient.patches import patch_id_from_hash
 from pwclient.projects import action_list as action_projects
 from pwclient.states import action_list as action_states
 from pwclient.transport import Transport
+from pwclient import utils
 
 # Default Patchwork remote XML-RPC server URL
 # This script will check the PW_XMLRPC_URL environment variable
@@ -265,37 +265,7 @@ installed locales.
     config.read([CONFIG_FILE])
 
     if not config.has_section('options') and os.path.exists(CONFIG_FILE):
-        sys.stderr.write('%s is in the old format. Migrating it...' %
-                         CONFIG_FILE)
-
-        old_project = config.get('base', 'project')
-
-        new_config = ConfigParser.ConfigParser()
-        new_config.add_section('options')
-
-        new_config.set('options', 'default', old_project)
-        new_config.add_section(old_project)
-
-        new_config.set(old_project, 'url', config.get('base', 'url'))
-        if config.has_option('auth', 'username'):
-            new_config.set(
-                old_project, 'username', config.get('auth', 'username'))
-        if config.has_option('auth', 'password'):
-            new_config.set(
-                old_project, 'password', config.get('auth', 'password'))
-
-        old_config_file = CONFIG_FILE + '.orig'
-        shutil.copy2(CONFIG_FILE, old_config_file)
-
-        with open(CONFIG_FILE, 'wb') as fd:
-            new_config.write(fd)
-
-        sys.stderr.write(' Done.\n')
-        sys.stderr.write(
-            'Your old %s was saved to %s\n' % (CONFIG_FILE, old_config_file))
-        sys.stderr.write(
-            'and was converted to the new format. You may want to\n')
-        sys.stderr.write('inspect it before continuing.\n')
+        utils.migrate_old_config_file(CONFIG_FILE, config)
         sys.exit(1)
 
     if not project_str:
