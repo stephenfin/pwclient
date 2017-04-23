@@ -24,7 +24,6 @@ from __future__ import unicode_literals
 
 import os
 import sys
-import argparse
 import subprocess
 
 from pwclient.checks import action_create as action_check_create
@@ -40,6 +39,7 @@ from pwclient.patches import action_list
 from pwclient.patches import action_update as action_update_patch
 from pwclient.patches import patch_id_from_hash
 from pwclient.projects import action_list as action_projects
+from pwclient import parser
 from pwclient.states import action_list as action_states
 from pwclient.transport import Transport
 from pwclient import utils
@@ -55,162 +55,7 @@ auth_actions = ['check_create', 'update']
 
 
 def main():
-    hash_parser = argparse.ArgumentParser(add_help=False)
-    hash_parser.add_argument(
-        '-h', action='store_true',
-        help='lookup patch(es) by hash instead of ID')
-    hash_parser.add_argument(
-        '-p', metavar='PROJECT',
-        help="lookup patch in project")
-    hash_parser.add_argument(
-        'id', metavar='PATCH_ID', nargs='+', action='store',
-        help="patch ID")
-
-    filter_parser = argparse.ArgumentParser(add_help=False)
-    filter_parser.add_argument(
-        '-s', metavar='STATE',
-        help="filter by patch state (e.g., 'New', 'Accepted', etc.)")
-    filter_parser.add_argument(
-        '-a', choices=['yes', 'no'],
-        help="filter by patch archived state")
-    filter_parser.add_argument(
-        '-p', metavar='PROJECT',
-        help="filter by project name (see 'projects' for list)")
-    filter_parser.add_argument(
-        '-w', metavar='WHO',
-        help="filter by submitter (name, e-mail substring search)")
-    filter_parser.add_argument(
-        '-d', metavar='WHO',
-        help="filter by delegate (name, e-mail substring search)")
-    filter_parser.add_argument(
-        '-n', metavar='MAX#', type=int,
-        help="limit results to first n")
-    filter_parser.add_argument(
-        '-N', metavar='MAX#', type=int,
-        help="limit results to last N")
-    filter_parser.add_argument(
-        '-m', metavar='MESSAGEID',
-        help="filter by Message-Id")
-    filter_parser.add_argument(
-        '-f', metavar='FORMAT',
-        help=("print output in the given format. You can use tags matching "
-              "fields, e.g. %%{id}, %%{state}, or %%{msgid}."))
-    filter_parser.add_argument(
-        'patch_name', metavar='STR', nargs='?',
-        help='substring to search for patches by name')
-
-    action_parser = argparse.ArgumentParser(
-        prog='pwclient',
-        formatter_class=argparse.RawTextHelpFormatter,
-        epilog="""Use 'pwclient <command> --help' for more info.
-
-To avoid unicode encode/decode errors, you should export the LANG or LC_ALL
-environment variables according to the configured locales on your system. If
-these variables are already set, make sure that they point to valid and
-installed locales.
-""",
-    )
-
-    subparsers = action_parser.add_subparsers(
-        title='Commands',
-    )
-
-    apply_parser = subparsers.add_parser(
-        'apply', parents=[hash_parser], conflict_handler='resolve',
-        help="apply a patch in the current directory using 'patch -p1'")
-    apply_parser.set_defaults(subcmd='apply')
-
-    git_am_parser = subparsers.add_parser(
-        'git-am', parents=[hash_parser], conflict_handler='resolve',
-        help="apply a patch to current git branch using 'git am'")
-    git_am_parser.add_argument(
-        '-s', '--signoff', action='store_true',
-        help="pass '--signoff' to 'git-am'")
-    git_am_parser.add_argument(
-        '-3', '--3way', action='store_true',
-        help="pass '--3way' to 'git-am'")
-    git_am_parser.set_defaults(subcmd='git_am')
-
-    get_parser = subparsers.add_parser(
-        'get', parents=[hash_parser], conflict_handler='resolve',
-        help="download a patch and save it locally"
-    )
-    get_parser.set_defaults(subcmd='get')
-
-    info_parser = subparsers.add_parser(
-        'info', parents=[hash_parser], conflict_handler='resolve',
-        help="show information for a given patch ID")
-    info_parser.set_defaults(subcmd='info')
-
-    projects_parser = subparsers.add_parser(
-        'projects',
-        help="list all projects")
-    projects_parser.set_defaults(subcmd='projects')
-
-    check_list_parser = subparsers.add_parser(
-        'check-list',
-        add_help=False,
-        help="list all checks"
-    )
-    check_list_parser.set_defaults(subcmd='check_list')
-
-    check_info_parser = subparsers.add_parser(
-        'check-info', add_help=False,
-        help="show information for a given check")
-    check_info_parser.add_argument(
-        'check_id', metavar='ID', action='store', type=int,
-        help="check ID")
-    check_info_parser.set_defaults(subcmd='check_info')
-
-    check_create_parser = subparsers.add_parser(
-        'check-create', parents=[hash_parser], conflict_handler='resolve',
-        help="add a check to a patch")
-    check_create_parser.add_argument(
-        '-c', metavar='CONTEXT')
-    check_create_parser.add_argument(
-        '-s', choices=('pending', 'success', 'warning', 'fail'))
-    check_create_parser.add_argument(
-        '-u', metavar='TARGET_URL', default="")
-    check_create_parser.add_argument(
-        '-d', metavar='DESCRIPTION', default="")
-    check_create_parser.set_defaults(subcmd='check_create')
-
-    states_parser = subparsers.add_parser(
-        'states',
-        help="show list of potential patch states")
-    states_parser.set_defaults(subcmd='states')
-
-    view_parser = subparsers.add_parser(
-        'view', parents=[hash_parser], conflict_handler='resolve',
-        help="view a patch")
-    view_parser.set_defaults(subcmd='view')
-
-    update_parser = subparsers.add_parser(
-        'update', parents=[hash_parser], conflict_handler='resolve',
-        help="update patch",
-        epilog="using a COMMIT-REF allows for only one ID to be specified")
-    update_parser.add_argument(
-        '-c', metavar='COMMIT-REF',
-        help="commit reference hash")
-    update_parser.add_argument(
-        '-s', metavar='STATE',
-        help="set patch state (e.g., 'Accepted', 'Superseded' etc.)")
-    update_parser.add_argument(
-        '-a', choices=['yes', 'no'],
-        help="set patch archived state")
-    update_parser.set_defaults(subcmd='update')
-
-    list_parser = subparsers.add_parser(
-        'list', parents=[filter_parser],
-        help='list patches using optional filters')
-    list_parser.set_defaults(subcmd='list')
-
-    # Poor man's argparse aliases: we register the "search" parser but
-    # effectively use "list" for the help-text.
-    search_parser = subparsers.add_parser(
-        "search", parents=[filter_parser],
-        help="alias for 'list'")
-    search_parser.set_defaults(subcmd='list')
+    action_parser = parser.get_parser()
 
     if len(sys.argv) < 2:
         action_parser.print_help()
@@ -238,24 +83,27 @@ installed locales.
 
     # update multiple IDs with a single commit-hash does not make sense
     if commit_str and len(patch_ids) > 1 and action == 'update':
-        update_parser.error(
-            "Declining update with COMMIT-REF on multiple IDs")
+        sys.stderr.write("Declining update with COMMIT-REF on multiple IDs")
+        sys.exit(1)
 
     if state_str is None and archived_str is None and action == 'update':
-        update_parser.error(
-            'Must specify one or more update options (-a or -s)')
+        sys.stderr.write(
+            'Must specify one or more update options (-a or -s)\n')
+        sys.exit(1)
 
     if args.get('n'):
         try:
             filt.add('max_count', args.get('n'))
         except:
-            action_parser.error("Invalid maximum count '%s'" % args.get('n'))
+            sys.stderr.write("Invalid maximum count '%s'\n" % args.get('n'))
+            sys.exit(1)
 
     if args.get('N'):
         try:
             filt.add('max_count', 0 - args.get('N'))
         except:
-            action_parser.error("Invalid maximum count '%s'" % args.get('N'))
+            sys.stderr.write("Invalid maximum count '%s'\n" % args.get('N'))
+            sys.exit(1)
 
     do_signoff = args.get('signoff')
     do_three_way = args.get('3way')
@@ -333,7 +181,8 @@ installed locales.
         try:
             patch_ids = [int(x) for x in patch_ids]
         except ValueError:
-            hash_parser.error('Patch IDs must be integers')
+            sys.stderr.write('Patch IDs must be integers')
+            sys.exit(1)
 
     if action == 'list' or action == 'search':
         if args.get('patch_name') is not None:
