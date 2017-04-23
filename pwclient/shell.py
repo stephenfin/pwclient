@@ -645,8 +645,9 @@ installed locales.
         try:
             project_str = config.get('options', 'default')
         except:
-            action_parser.error(
-                "No default project configured in %s\n" % CONFIG_FILE)
+            sys.stderr.write(
+                'No default project configured in %s\n' % CONFIG_FILE)
+            sys.exit(1)
 
     if not config.has_section(project_str):
         sys.stderr.write(
