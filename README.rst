@@ -50,7 +50,7 @@ Once dependencies are installed, clone this repo and run ``setup.py``:
 
    $ git clone https://github.com/getpatchwork/pwclient
    $ cd pwclient
-   $ sudo python setup.py
+   $ sudo python setup.py install
 
 Getting Started
 ---------------
