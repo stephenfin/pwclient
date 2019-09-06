@@ -1,8 +1,0 @@
-formats:
-  - epub
-  - pdf
-requirements_file: test-requirements.txt
-python:
-  version: 3
-  setup_py_install: true
-  pip_install: true
